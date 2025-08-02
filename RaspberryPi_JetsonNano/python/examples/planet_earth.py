@@ -43,17 +43,19 @@ try:
     logging.info("epd2in13_V4 Spinning Sphere Demo")
 
     epd = epd2in13_V4.EPD()
-    logging.info("init and clear")
     epd.init()
     epd.Clear(0xFF)
 
-    font15 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 15)
     font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
 
-    # Set stdin to raw mode
+    # Set stdin to raw mode to detect single keypresses
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
     tty.setcbreak(fd)
+
+    # Set base image for partial updates
+    base_image = Image.new('1', (epd.height, epd.width), 255)
+    epd.displayPartBaseImage(epd.getbuffer(base_image))
 
     angle = 0
     logging.info("Spinning... Press any key to exit.")
@@ -61,19 +63,25 @@ try:
         if key_pressed():
             break
 
-        image = Image.new('1', (epd.height, epd.width), 255)  # 255 = white
+        image = Image.new('1', (epd.height, epd.width), 255)
         draw = ImageDraw.Draw(image)
 
+        # Draw sphere
         draw_wire_sphere(draw, center=(epd.height // 2, epd.width // 2 - 10), radius=30, rotation_angle_deg=angle)
-        draw.text((epd.height // 2 - 45, epd.width - 50), 'EARTH CORP.', font=font24, fill=0)
 
-        epd.display(epd.getbuffer(image))
+        # Center and draw text
+        text = 'EARTH CORP.'
+        text_width, _ = draw.textsize(text, font=font24)
+        x_text = (epd.height - text_width) // 2
+        y_text = epd.width - 30
+        draw.text((x_text, y_text), text, font=font24, fill=0)
+
+        epd.displayPartial(epd.getbuffer(image))
         time.sleep(0.3)
         angle = (angle + 15) % 360
 
     logging.info("Exiting...")
 
-    # Restore terminal and shutdown display
     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     epd.init()
     epd.Clear(0xFF)
