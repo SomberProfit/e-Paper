@@ -39,12 +39,27 @@ epd.init()
 epd.Clear(0xFF)
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
 
+# Track conversation text and y-position
+screen_lines = []
+max_lines = epd.width // 14  # vertical resolution divided by line height
+
 try:
     while True:
         print("Ask ChatGPT:")
         prompt = input("> ")
 
         print("\nThinking...\n")
+        screen_lines.append("Thinking...")
+        while len(screen_lines) > max_lines:
+            screen_lines.pop(0)
+
+        image = Image.new('1', (epd.height, epd.width), 255)
+        draw = ImageDraw.Draw(image)
+        y = 0
+        for line in screen_lines:
+            draw.text((0, y), line.strip(), font=font, fill=0)
+            y += 14
+        epd.displayPartBaseImage(epd.getbuffer(image))
 
         try:
             response = client.chat.completions.create(
@@ -57,11 +72,20 @@ try:
             print("ChatGPT Response:\n")
             print(answer)
 
-            # Display answer on e-Paper
+            # Format answer lines and divider
+            new_lines = answer.split('\n') + ["----------"]
+
+            # Update screen line buffer with scroll if needed
+            screen_lines.pop()  # remove "Thinking..."
+            screen_lines.extend(new_lines)
+            while len(screen_lines) > max_lines:
+                screen_lines.pop(0)
+
+            # Draw all lines on screen
             image = Image.new('1', (epd.height, epd.width), 255)
             draw = ImageDraw.Draw(image)
             y = 0
-            for line in answer.split('\n'):
+            for line in screen_lines:
                 draw.text((0, y), line.strip(), font=font, fill=0)
                 y += 14
             epd.displayPartBaseImage(epd.getbuffer(image))
