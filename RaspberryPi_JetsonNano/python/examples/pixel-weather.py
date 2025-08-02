@@ -119,38 +119,37 @@ try:
     epd.init()
     epd.Clear(0xFF)
 
-    # Stylized loading screen
-    load_img = Image.new('1', (epd.height, epd.width), 255)
-    draw = ImageDraw.Draw(load_img)
-
+    # Game of Life loading screen with STOCHASTIC.HAUS label
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 18)
     except:
         font = ImageFont.load_default()
 
-    for _ in range(8):
-        draw.rectangle((0, 0, epd.height, epd.width), fill=255)
+    width, height = epd.height, epd.width
+    cols, rows = width // 4, height // 4
+    grid = [[random.randint(0, 1) for _ in range(cols)] for _ in range(rows)]
+
+    def next_gen(g):
+        def count_neighbors(x, y):
+            return sum(
+                g[(y + j) % rows][(x + i) % cols]
+                for j in [-1, 0, 1] for i in [-1, 0, 1] if not (i == 0 and j == 0)
+            )
+        return [[1 if (c := count_neighbors(x, y)) == 3 or (cell and c == 2) else 0
+                 for x, cell in enumerate(row)] for y, row in enumerate(g)]
+
+    start_time = time.time()
+    while time.time() - start_time < 5:
+        image = Image.new('1', (width, height), 255)
+        draw = ImageDraw.Draw(image)
         draw.text((10, 40), "STOCHASTIC.HAUS", font=font, fill=0)
-
-        # Draw stochastic squiggle
-        x_start = 10
-        y_base = 70
-        steps = 60
-        walk = [y_base]
-        for _ in range(steps - 1):
-            delta = random.choice([-1, 0, 1])
-            walk.append(max(0, min(122, walk[-1] + delta)))
-
-        for i in range(steps - 1):
-            x1 = x_start + i
-            x2 = x_start + i + 1
-            y1 = walk[i]
-            y2 = walk[i + 1]
-            if x2 < epd.height:
-                draw.line((x1, y1, x2, y2), fill=0)
-
-        epd.displayPartial(epd.getbuffer(load_img))
-        time.sleep(0.25)
+        for y in range(rows):
+            for x in range(cols):
+                if grid[y][x]:
+                    draw.rectangle((x*4, y*4, x*4+3, y*4+3), fill=0)
+        epd.displayPartial(epd.getbuffer(image))
+        grid = next_gen(grid)
+        time.sleep(0.2)
 
     base = Image.new('1', (epd.height, epd.width), 255)
     epd.displayPartBaseImage(epd.getbuffer(base))
