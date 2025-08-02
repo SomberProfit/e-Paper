@@ -65,7 +65,7 @@ try:
         draw = ImageDraw.Draw(image)
 
         draw_wire_sphere(draw, center=(epd.height // 2, epd.width // 2 - 10), radius=30, rotation_angle_deg=angle)
-        draw.text((epd.height // 2 - 45, epd.width - 30), 'EARTH CORP.', font=font24, fill=0)
+        draw.text((epd.height // 2 - 45, epd.width - 50), 'EARTH CORP.', font=font24, fill=0)
 
         epd.display(epd.getbuffer(image))
         time.sleep(0.3)
