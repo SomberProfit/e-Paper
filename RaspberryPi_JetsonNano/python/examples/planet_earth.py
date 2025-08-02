@@ -75,14 +75,14 @@ try:
         draw_rotated_triangle_with_eye(draw, center=(epd.height // 2, epd.width // 2 - 10), size=30, angle_deg=angle)
 
         # Center and draw text
-        text = 'ARIEL IS NOSY >:('
+        text = 'I LOVE ARIEL'
         text_width, _ = draw.textsize(text, font=font24)
         x_text = (epd.height - text_width) // 2
         y_text = epd.width - 30
         draw.text((x_text, y_text), text, font=font24, fill=0)
 
         epd.displayPartial(epd.getbuffer(image))
-        time.sleep(0.3)
+        time.sleep(0.01)
         angle = (angle + 10) % 360
 
     logging.info("Exiting...")
