@@ -9,7 +9,7 @@ import select
 import logging
 import random
 from datetime import datetime
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 # Setup paths
 picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
@@ -122,6 +122,23 @@ try:
     epd = epd2in13_V4.EPD()
     epd.init()
     epd.Clear(0xFF)
+
+    # Show loading screen animation
+    load_img = Image.new('1', (epd.height, epd.width), 255)
+    draw = ImageDraw.Draw(load_img)
+
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 18)
+    except:
+        font = ImageFont.load_default()
+
+    dots = ""
+    for i in range(8):
+        draw.rectangle((0, 0, epd.height, epd.width), fill=255)
+        draw.text((10, 50), f"Loading{dots}", font=font, fill=0)
+        epd.displayPartial(epd.getbuffer(load_img))
+        time.sleep(0.25)
+        dots += "."
 
     base = Image.new('1', (epd.height, epd.width), 255)
     epd.displayPartBaseImage(epd.getbuffer(base))
