@@ -25,22 +25,27 @@ def key_pressed():
     dr, dw, de = select.select([sys.stdin], [], [], 0)
     return dr != []
 
-def draw_wire_sphere(draw, center, radius, rotation_angle_deg):
+def draw_rotated_triangle_with_eye(draw, center, size, angle_deg):
+    """Draw a rotating triangle with a symbolic 'eye' in the middle."""
     cx, cy = center
-    steps = 20
-    angle_rad = rotation_angle_deg * pi / 180
+    angle_rad = angle_deg * pi / 180
+    points = []
+    for i in range(3):
+        theta = 2 * pi * i / 3 + angle_rad
+        x = cx + size * cos(theta)
+        y = cy + size * sin(theta)
+        points.append((x, y))
+    
+    # Draw triangle
+    draw.polygon(points, outline=0)
 
-    for i in range(steps):
-        theta = 2 * pi * i / steps + angle_rad
-        x = int(cx + radius * cos(theta))
-        draw.line((x, cy - radius, x, cy + radius), fill=0)
-
-    for j in range(-2, 3):
-        ry = int(radius * cos(j * pi / 6))
-        draw.ellipse((cx - radius, cy - ry, cx + radius, cy + ry), outline=0)
+    # Draw simple "eye" inside (just a horizontal ellipse and pupil)
+    eye_rx, eye_ry = size // 3, size // 6
+    draw.ellipse((cx - eye_rx, cy - eye_ry, cx + eye_rx, cy + eye_ry), outline=0)
+    draw.ellipse((cx - 2, cy - 2, cx + 2, cy + 2), fill=0)
 
 try:
-    logging.info("epd2in13_V4 Spinning Sphere Demo")
+    logging.info("epd2in13_V4 Illuminati Eye Demo")
 
     epd = epd2in13_V4.EPD()
     epd.init()
@@ -58,7 +63,7 @@ try:
     epd.displayPartBaseImage(epd.getbuffer(base_image))
 
     angle = 0
-    logging.info("Spinning... Press any key to exit.")
+    logging.info("Spinning Illuminati... Press any key to exit.")
     while True:
         if key_pressed():
             break
@@ -66,11 +71,11 @@ try:
         image = Image.new('1', (epd.height, epd.width), 255)
         draw = ImageDraw.Draw(image)
 
-        # Draw sphere
-        draw_wire_sphere(draw, center=(epd.height // 2, epd.width // 2 - 10), radius=30, rotation_angle_deg=angle)
+        # Draw rotating triangle + eye
+        draw_rotated_triangle_with_eye(draw, center=(epd.height // 2, epd.width // 2 - 10), size=30, angle_deg=angle)
 
         # Center and draw text
-        text = 'EARTH CORP.'
+        text = 'ARIEL IS NOSY >:('
         text_width, _ = draw.textsize(text, font=font24)
         x_text = (epd.height - text_width) // 2
         y_text = epd.width - 30
@@ -78,7 +83,7 @@ try:
 
         epd.displayPartial(epd.getbuffer(image))
         time.sleep(0.3)
-        angle = (angle + 15) % 360
+        angle = (angle + 10) % 360
 
     logging.info("Exiting...")
 
