@@ -139,7 +139,7 @@ try:
                  for x, cell in enumerate(row)] for y, row in enumerate(g)]
 
     start_time = time.time()
-    while time.time() - start_time < 5:
+    while time.time() - start_time < 10:
         image = Image.new('1', (width, height), 255)
         draw = ImageDraw.Draw(image)
         draw.text((10, 40), "STOCHASTIC.HAUS", font=font, fill=0)
