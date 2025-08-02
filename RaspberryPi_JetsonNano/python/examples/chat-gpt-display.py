@@ -33,15 +33,33 @@ def get_keypress():
         return sys.stdin.read(1)
     return None
 
+def wrap_text(text, draw, font, max_width):
+    lines = []
+    for paragraph in text.split('\n'):
+        words = paragraph.split()
+        line = ""
+        for word in words:
+            test_line = f"{line} {word}" if line else word
+            if draw.textlength(test_line, font=font) <= max_width:
+                line = test_line
+            else:
+                lines.append(line)
+                line = word
+        if line:
+            lines.append(line)
+    return lines
+
 # Setup e-Paper
 epd = epd2in13_V4.EPD()
 epd.init()
 epd.Clear(0xFF)
 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
+max_width = epd.height - 5
+line_height = 14
+max_lines = epd.width // line_height
 
 # Track conversation text and y-position
 screen_lines = []
-max_lines = epd.width // 14  # vertical resolution divided by line height
 
 try:
     while True:
@@ -49,17 +67,18 @@ try:
         prompt = input("> ")
 
         print("\nThinking...\n")
-        screen_lines.append("Thinking...")
-        while len(screen_lines) > max_lines:
-            screen_lines.pop(0)
+        thinking_img = Image.new('1', (epd.height, epd.width), 255)
+        thinking_draw = ImageDraw.Draw(thinking_img)
+        thinking_lines = screen_lines + wrap_text("Thinking...", thinking_draw, font, max_width)
 
-        image = Image.new('1', (epd.height, epd.width), 255)
-        draw = ImageDraw.Draw(image)
+        while len(thinking_lines) > max_lines:
+            thinking_lines.pop(0)
+
         y = 0
-        for line in screen_lines:
-            draw.text((0, y), line.strip(), font=font, fill=0)
-            y += 14
-        epd.displayPartBaseImage(epd.getbuffer(image))
+        for line in thinking_lines:
+            thinking_draw.text((0, y), line.strip(), font=font, fill=0)
+            y += line_height
+        epd.displayPartBaseImage(epd.getbuffer(thinking_img))
 
         try:
             response = client.chat.completions.create(
@@ -72,22 +91,19 @@ try:
             print("ChatGPT Response:\n")
             print(answer)
 
-            # Format answer lines and divider
-            new_lines = answer.split('\n') + ["----------"]
-
-            # Update screen line buffer with scroll if needed
-            screen_lines.pop()  # remove "Thinking..."
+            # Wrap and format
+            image = Image.new('1', (epd.height, epd.width), 255)
+            draw = ImageDraw.Draw(image)
+            wrapped = wrap_text(answer, draw, font, max_width)
+            new_lines = wrapped + ["----------"]
             screen_lines.extend(new_lines)
             while len(screen_lines) > max_lines:
                 screen_lines.pop(0)
 
-            # Draw all lines on screen
-            image = Image.new('1', (epd.height, epd.width), 255)
-            draw = ImageDraw.Draw(image)
             y = 0
             for line in screen_lines:
                 draw.text((0, y), line.strip(), font=font, fill=0)
-                y += 14
+                y += line_height
             epd.displayPartBaseImage(epd.getbuffer(image))
 
         except Exception as e:
