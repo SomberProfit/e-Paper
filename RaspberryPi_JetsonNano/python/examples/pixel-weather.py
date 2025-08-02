@@ -127,12 +127,18 @@ try:
 
     width, height = epd.height, epd.width
     cols, rows = width // 4, height // 4
-    grid = [[random.randint(0, 1) for _ in range(cols)] for _ in range(rows)]
+    text_box = (10, 2, 240, 24)
+
+    def in_text_box(x, y):
+        px, py = x * 4, y * 4
+        return text_box[0] <= px <= text_box[2] and text_box[1] <= py <= text_box[3]
+
+    grid = [[random.randint(0, 1) if not in_text_box(x, y) else 0 for x in range(cols)] for y in range(rows)]
 
     def next_gen(g):
         def count_neighbors(x, y):
             return sum(
-                g[(y + j) % rows][(x + i) % cols]
+                g[(y + j) % len(g)][(x + i) % cols]
                 for j in [-1, 0, 1] for i in [-1, 0, 1] if not (i == 0 and j == 0)
             )
         return [[1 if (c := count_neighbors(x, y)) == 3 or (cell and c == 2) else 0
@@ -142,8 +148,8 @@ try:
     while time.time() - start_time < 5:
         image = Image.new('1', (width, height), 255)
         draw = ImageDraw.Draw(image)
-        draw.text((10, 40), "STOCHASTIC.HAUS", font=font, fill=0)
-        for y in range(rows):
+        draw.text((10, 2), "STOCHASTIC.HAUS", font=font, fill=0)
+        for y in range(len(grid)):
             for x in range(cols):
                 if grid[y][x]:
                     draw.rectangle((x*4, y*4, x*4+3, y*4+3), fill=0)
@@ -211,8 +217,4 @@ except KeyboardInterrupt:
     logging.info("Interrupted by user")
 
 finally:
-    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    epd.init()
-    epd.Clear(0xFF)
-    epd.sleep()
-    logging.info("Display cleared and sleeping")
+    termios.tcset
