@@ -21,7 +21,7 @@ from waveshare_epd import epd2in13_V4
 
 logging.basicConfig(level=logging.INFO)
 
-# Simulation constants
+# Constants
 NUM_CLOUDS = 3
 CLOUD_WIDTH = 40
 NUM_PARTICLES = 25
@@ -49,16 +49,16 @@ def draw_city(draw):
         draw.rectangle((x + 2, 122 - height, x + 10, 122), fill=0)
 
 def draw_cloud(draw, x, y):
-    draw.ellipse((x, y, x + 20, y + 10), fill=0)
-    draw.ellipse((x + 10, y - 5, x + 30, y + 7), fill=0)
-    draw.ellipse((x + 20, y, x + 40, y + 10), fill=0)
+    draw.ellipse((x, y, x + 20, y + 10), fill=1)
+    draw.ellipse((x + 10, y - 5, x + 30, y + 7), fill=1)
+    draw.ellipse((x + 20, y, x + 40, y + 10), fill=1)
 
 def draw_sun(draw):
     draw.ellipse((200, 5, 220, 25), outline=0)
 
 def draw_moon(draw):
-    draw.ellipse((200, 5, 220, 25), fill=0)
-    draw.ellipse((205, 5, 225, 25), fill=1)
+    draw.ellipse((200, 5, 220, 25), fill=1)
+    draw.ellipse((205, 5, 225, 25), fill=0)
 
 def draw_house(draw, base_x, base_y):
     draw.rectangle((base_x, base_y - 20, base_x + 30, base_y), outline=0, fill=255)
@@ -93,10 +93,10 @@ def draw_fireflies(draw):
     for f in fireflies:
         f['blink'] = random.random() > 0.8
         if f['blink']:
-            draw.point((f['x'], f['y']), fill=0)
+            draw.point((f['x'], f['y']), fill=1)
 
 try:
-    logging.info("Pixel Weather Scene with Ctrl+T toggle")
+    logging.info("Pixel Weather Scene with Ctrl+T and Milky Way")
 
     epd = epd2in13_V4.EPD()
     epd.init()
@@ -105,25 +105,29 @@ try:
     base = Image.new('1', (epd.height, epd.width), 255)
     epd.displayPartBaseImage(epd.getbuffer(base))
 
-    # Set terminal to raw mode for keypresses
     fd = sys.stdin.fileno()
     old_settings = termios.tcgetattr(fd)
     tty.setcbreak(fd)
 
-    # Start with real-time based mode
     night = is_night_time()
 
     while True:
-        # Toggle manually with Ctrl+T
         key = get_keypress()
-        if key == '\x14':  # Ctrl+T
+        if key == '\x14':
             night = not night
             logging.info("Toggled night mode: %s", night)
 
-        image = Image.new('1', (epd.height, epd.width), 255)
+        image = Image.new('1', (epd.height, epd.width), 0 if night else 255)
         draw = ImageDraw.Draw(image)
 
-        draw_moon(draw) if night else draw_sun(draw)
+        if night:
+            draw_moon(draw)
+            for _ in range(80):
+                sx = random.randint(40, 200)
+                sy = random.randint(5, 50)
+                draw.point((sx, sy), fill=1)
+        else:
+            draw_sun(draw)
 
         for cloud in clouds:
             draw_cloud(draw, cloud['x'], cloud['y'])
