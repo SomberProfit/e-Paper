@@ -52,10 +52,11 @@ def draw_city(draw):
         height = random.randint(5, 10)
         draw.rectangle((x + 2, 122 - height, x + 10, 122), fill=0)
 
-def draw_cloud(draw, x, y):
-    draw.ellipse((x, y, x + 20, y + 10), fill=1)
-    draw.ellipse((x + 10, y - 5, x + 30, y + 7), fill=1)
-    draw.ellipse((x + 20, y, x + 40, y + 10), fill=1)
+def draw_cloud(draw, x, y, fill_color=1):
+    draw.ellipse((x, y, x + 20, y + 10), fill=fill_color)
+    draw.ellipse((x + 10, y - 5, x + 30, y + 7), fill=fill_color)
+    draw.ellipse((x + 20, y, x + 40, y + 10), fill=fill_color)
+
 
 def draw_sun(draw):
     draw.ellipse((200, 5, 220, 25), outline=0)
@@ -99,9 +100,9 @@ def draw_fireflies(draw):
         if f['blink']:
             draw.point((f['x'], f['y']), fill=1)
 
-def draw_fire_glow(draw):
-    for radius in range(25, 0, -5):
-        draw.ellipse((75 - radius, 110 - radius, 75 + radius, 110 + radius), outline=1)
+# def draw_fire_glow(draw):
+#     for radius in range(25, 0, -5):
+#         draw.ellipse((75 - radius, 110 - radius, 75 + radius, 110 + radius), outline=1)
 
 def draw_shooting_star(draw):
     global shooting_star
@@ -169,7 +170,8 @@ try:
             draw_sun(draw)
 
         for cloud in clouds:
-            draw_cloud(draw, cloud['x'], cloud['y'])
+            cloud_color = 1 if night else 0  # White at night, black in day
+            draw_cloud(draw, cloud['x'], cloud['y'], fill_color=cloud_color)
             cloud['x'] -= 1
             if cloud['x'] < -CLOUD_WIDTH:
                 cloud['x'] = epd.height
@@ -191,7 +193,7 @@ try:
 
         if night:
             draw_fireflies(draw)
-            draw_fire_glow(draw)
+            #draw_fire_glow(draw)
 
         epd.displayPartial(epd.getbuffer(image))
         time.sleep(0.1)
