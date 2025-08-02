@@ -8,6 +8,7 @@ import tty
 import termios
 import select
 import time
+import json
 from PIL import Image, ImageDraw, ImageFont
 
 # Setup paths
@@ -25,8 +26,12 @@ client = openai.OpenAI(api_key=api_key)
 # Terminal settings for keypress
 fd = sys.stdin.fileno()
 old_settings = termios.tcgetattr(fd)
-tty.setcbreak(fd)
 
+# Constants
+HISTORY_FILE = "chat_history.json"
+SCROLL_STEP = 1
+
+# Helpers
 def get_keypress():
     dr, _, _ = select.select([sys.stdin], [], [], 0)
     if dr:
@@ -49,6 +54,26 @@ def wrap_text(text, draw, font, max_width):
             lines.append(line)
     return lines
 
+def load_history():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def save_history(lines):
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(lines, f)
+
+def display_lines(epd, font, lines, scroll_offset, max_lines, max_width):
+    image = Image.new('1', (epd.height, epd.width), 255)
+    draw = ImageDraw.Draw(image)
+    view = lines[scroll_offset:scroll_offset + max_lines]
+    y = 0
+    for line in view:
+        draw.text((0, y), line.strip(), font=font, fill=0)
+        y += line_height
+    epd.displayPartBaseImage(epd.getbuffer(image))
+
 # Setup e-Paper
 epd = epd2in13_V4.EPD()
 epd.init()
@@ -58,27 +83,23 @@ max_width = epd.height - 5
 line_height = 14
 max_lines = epd.width // line_height
 
-# Track conversation text and y-position
-screen_lines = []
+# Load history
+screen_lines = load_history()
+scroll_offset = max(0, len(screen_lines) - max_lines)
+display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
 
+# Run loop
 try:
+    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     while True:
         print("Ask ChatGPT:")
         prompt = input("> ")
 
-        print("\nThinking...\n")
-        thinking_img = Image.new('1', (epd.height, epd.width), 255)
-        thinking_draw = ImageDraw.Draw(thinking_img)
-        thinking_lines = screen_lines + wrap_text("Thinking...", thinking_draw, font, max_width)
-
-        while len(thinking_lines) > max_lines:
-            thinking_lines.pop(0)
-
-        y = 0
-        for line in thinking_lines:
-            thinking_draw.text((0, y), line.strip(), font=font, fill=0)
-            y += line_height
-        epd.displayPartBaseImage(epd.getbuffer(thinking_img))
+        tty.setcbreak(fd)
+        thinking_text = "Thinking..."
+        screen_lines.append(thinking_text)
+        scroll_offset = max(0, len(screen_lines) - max_lines)
+        display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
 
         try:
             response = client.chat.completions.create(
@@ -91,26 +112,38 @@ try:
             print("ChatGPT Response:\n")
             print(answer)
 
-            # Wrap and format
-            image = Image.new('1', (epd.height, epd.width), 255)
-            draw = ImageDraw.Draw(image)
-            wrapped = wrap_text(answer, draw, font, max_width)
+            wrapped = wrap_text(answer, ImageDraw.Draw(Image.new('1', (epd.height, epd.width), 255)), font, max_width)
             new_lines = wrapped + ["----------"]
-            screen_lines.extend(new_lines)
-            while len(screen_lines) > max_lines:
-                screen_lines.pop(0)
-
-            y = 0
-            for line in screen_lines:
-                draw.text((0, y), line.strip(), font=font, fill=0)
-                y += line_height
-            epd.displayPartBaseImage(epd.getbuffer(image))
+            screen_lines = screen_lines[:-1] + new_lines  # replace "Thinking..." with response
+            save_history(screen_lines)
+            scroll_offset = max(0, len(screen_lines) - max_lines)
+            display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
 
         except Exception as e:
             print("Error from OpenAI:", str(e))
 
-        print("\nPress any key to continue or Ctrl+C to exit.")
-        while not get_keypress():
+        print("\nUse arrow keys to scroll, or press Enter to continue.")
+
+        while True:
+            key = get_keypress()
+            if key == '\x1b':  # escape sequence
+                if select.select([sys.stdin], [], [], 0.1)[0]:
+                    next1 = sys.stdin.read(1)
+                    if next1 == '[':
+                        next2 = sys.stdin.read(1)
+                        if next2 == 'A':  # up
+                            if scroll_offset > 0:
+                                scroll_offset -= SCROLL_STEP
+                                display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
+                        elif next2 == 'B':  # down
+                            if scroll_offset < max(0, len(screen_lines) - max_lines):
+                                scroll_offset += SCROLL_STEP
+                                display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
+                        elif next2 == 'C':  # right arrow resets view
+                            scroll_offset = max(0, len(screen_lines) - max_lines)
+                            display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
+            elif key == '\n':
+                break
             time.sleep(0.1)
 
 except KeyboardInterrupt:
