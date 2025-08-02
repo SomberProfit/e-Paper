@@ -31,6 +31,10 @@ NUM_FIREFLIES = 15
 clouds = [{'x': random.randint(0, 250), 'y': random.randint(0, 20)} for _ in range(NUM_CLOUDS)]
 particles = [{'x': random.randint(0, 250), 'y': random.randint(30, 122)} for _ in range(NUM_PARTICLES)]
 fireflies = [{'x': random.randint(0, 250), 'y': random.randint(30, 100), 'blink': False} for _ in range(NUM_FIREFLIES)]
+stars = [(random.randint(40, 200), random.randint(5, 50)) for _ in range(80)]
+shooting_star_timer = time.time()
+shooting_star = None
+
 
 def is_night_time():
     now = datetime.now()
@@ -95,8 +99,25 @@ def draw_fireflies(draw):
         if f['blink']:
             draw.point((f['x'], f['y']), fill=1)
 
+def draw_fire_glow(draw):
+    for radius in range(25, 0, -5):
+        draw.ellipse((75 - radius, 110 - radius, 75 + radius, 110 + radius), outline=1)
+
+def draw_shooting_star(draw):
+    global shooting_star
+    if shooting_star:
+        x, y = shooting_star
+        for i in range(5):
+            draw.point((x - i, y - i), fill=1)
+
+def update_shooting_star():
+    global shooting_star, shooting_star_timer
+    if time.time() - shooting_star_timer >= 3:
+        shooting_star = (random.randint(100, 200), random.randint(5, 20))
+        shooting_star_timer = time.time()
+
 try:
-    logging.info("Pixel Weather Scene with Ctrl+T and Milky Way")
+    logging.info("Pixel Weather Scene with Fire and Shooting Star")
 
     epd = epd2in13_V4.EPD()
     epd.init()
@@ -117,15 +138,16 @@ try:
             night = not night
             logging.info("Toggled night mode: %s", night)
 
+        update_shooting_star()
+
         image = Image.new('1', (epd.height, epd.width), 0 if night else 255)
         draw = ImageDraw.Draw(image)
 
         if night:
             draw_moon(draw)
-            for _ in range(80):
-                sx = random.randint(40, 200)
-                sy = random.randint(5, 50)
+            for sx, sy in stars:
                 draw.point((sx, sy), fill=1)
+            draw_shooting_star(draw)
         else:
             draw_sun(draw)
 
@@ -152,6 +174,7 @@ try:
 
         if night:
             draw_fireflies(draw)
+            draw_fire_glow(draw)
 
         epd.displayPartial(epd.getbuffer(image))
         time.sleep(0.1)
