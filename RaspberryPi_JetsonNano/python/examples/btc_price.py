@@ -5,6 +5,7 @@ import os
 import time
 import logging
 import requests
+import random
 from PIL import Image, ImageDraw, ImageFont
 
 # Setup paths
@@ -33,8 +34,22 @@ def get_btc_price():
         logging.warning(f"Error fetching BTC price: {e}")
         return None
 
+def draw_sparkline(draw, prices, x, y, width, height):
+    if len(prices) < 2:
+        return
+    min_p = min(prices)
+    max_p = max(prices)
+    scale = (max_p - min_p) or 1
+    step = width / (len(prices) - 1)
+    points = []
+    for i, p in enumerate(prices):
+        px = x + i * step
+        py = y + height - ((p - min_p) / scale) * height
+        points.append((px, py))
+    draw.line(points, fill=0, width=1)
+
 try:
-    logging.info("BTC Price + Sparkline Display Starting")
+    logging.info("BTC Price + Drawn Sparkline Starting")
 
     epd = epd2in13_V4.EPD()
     epd.init()
@@ -49,17 +64,18 @@ try:
     BAR_HEIGHT = 8
     BAR_Y = epd.width - BAR_HEIGHT
 
-    sparkline_path = os.path.join(picdir, 'btc_sparkline.bmp')
-    if os.path.exists(sparkline_path):
-        sparkline = Image.open(sparkline_path).resize((epd.height, 30)).convert('1')
-    else:
-        sparkline = None
-        logging.warning("No sparkline image found.")
+    # Initialize fake history
+    price_history = [random.uniform(30000, 40000) for _ in range(40)]
 
     while True:
         price = get_btc_price()
+        if price is not None:
+            price_history.append(price)
+            price_history = price_history[-40:]
+        else:
+            price_history.append(price_history[-1] if price_history else 35000)
 
-        for i in range(10):  # 10 slices per 2 seconds
+        for i in range(10):
             image = Image.new('1', (epd.height, epd.width), 255)
             draw = ImageDraw.Draw(image)
 
@@ -69,18 +85,15 @@ try:
             else:
                 text = "BTC: ERROR"
 
-            # Center text
             bbox = draw.textbbox((0, 0), text, font=font24)
             text_width = bbox[2] - bbox[0]
-            x = (epd.height - text_width) // 2
-            y = 0
-            draw.text((x, y), text, font=font24, fill=0)
+            x_text = (epd.height - text_width) // 2
+            draw.text((x_text, 0), text, font=font24, fill=0)
 
-            # Sparkline image (optional)
-            if sparkline:
-                image.paste(sparkline, (0, 30))
+            # Sparkline
+            draw_sparkline(draw, price_history, x=0, y=30, width=epd.height, height=30)
 
-            # Progress/status bar
+            # Status bar
             progress = (i + 1) / 10
             bar_fill_width = int(epd.height * progress)
             draw.rectangle((0, BAR_Y, bar_fill_width, BAR_Y + BAR_HEIGHT), fill=0)
