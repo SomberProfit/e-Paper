@@ -41,18 +41,15 @@ def draw_sun(draw):
     draw.ellipse((200, 5, 220, 25), outline=0)
 
 def draw_house(draw, base_x, base_y):
-    # House base
     draw.rectangle((base_x, base_y - 20, base_x + 30, base_y), outline=0, fill=255)
-    # Roof
     draw.polygon([(base_x - 2, base_y - 20), (base_x + 15, base_y - 35), (base_x + 32, base_y - 20)], outline=0)
-    # Door
     draw.rectangle((base_x + 12, base_y - 10, base_x + 18, base_y), outline=0)
 
 def draw_person(draw, x, y, is_female=False):
     draw.ellipse((x - 2, y - 6, x + 2, y - 2), fill=0)  # head
     draw.line((x, y - 2, x, y + 4), fill=0)  # body
-    draw.line((x, y, x - 2, y + 3), fill=0)  # leg left
-    draw.line((x, y, x + 2, y + 3), fill=0)  # leg right
+    draw.line((x, y, x - 2, y + 3), fill=0)
+    draw.line((x, y, x + 2, y + 3), fill=0)
     if is_female:
         draw.line((x, y - 2, x - 3, y + 1), fill=0)
         draw.line((x, y - 2, x + 3, y + 1), fill=0)
@@ -62,12 +59,20 @@ def draw_person(draw, x, y, is_female=False):
 
 def draw_dog(draw, x, y):
     draw.rectangle((x, y, x + 6, y + 3), fill=0)
-    draw.point((x + 6, y), fill=0)  # ear
-    draw.point((x + 1, y - 1), fill=0)  # head
-    draw.point((x + 2, y + 4), fill=0)  # tail
+    draw.point((x + 6, y), fill=0)
+    draw.point((x + 1, y - 1), fill=0)
+    draw.point((x + 2, y + 4), fill=0)
+
+def draw_tree(draw, base_x, base_y):
+    # Trunk
+    draw.rectangle((base_x + 4, base_y - 20, base_x + 6, base_y), fill=0)
+    # Foliage (triangles)
+    draw.polygon([(base_x - 10, base_y - 20), (base_x + 5, base_y - 35), (base_x + 20, base_y - 20)], outline=0)
+    draw.polygon([(base_x - 8, base_y - 25), (base_x + 5, base_y - 40), (base_x + 18, base_y - 25)], outline=0)
+    draw.polygon([(base_x - 6, base_y - 30), (base_x + 5, base_y - 45), (base_x + 16, base_y - 30)], outline=0)
 
 try:
-    logging.info("Pixel Weather Scene with Family & Dog")
+    logging.info("Pixel Weather Scene with Family, Dog, Tree")
 
     epd = epd2in13_V4.EPD()
     epd.init()
@@ -98,9 +103,12 @@ try:
 
         draw_city(draw)
         draw_house(draw, 30, 110)
-        draw_person(draw, 45, 106, is_female=False)
-        draw_person(draw, 55, 106, is_female=True)
-        draw_dog(draw, 65, 108)
+        draw_tree(draw, 160, 110)
+
+        # Characters outside
+        draw_person(draw, 90, 106, is_female=False)  # man
+        draw_person(draw, 100, 106, is_female=True)  # woman
+        draw_dog(draw, 110, 108)
 
         epd.displayPartial(epd.getbuffer(image))
         time.sleep(0.1)
