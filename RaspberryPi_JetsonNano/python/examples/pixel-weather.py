@@ -57,7 +57,6 @@ def draw_cloud(draw, x, y, fill_color=1):
     draw.ellipse((x + 10, y - 5, x + 30, y + 7), fill=fill_color)
     draw.ellipse((x + 20, y, x + 40, y + 10), fill=fill_color)
 
-
 def draw_sun(draw):
     draw.ellipse((200, 5, 220, 25), outline=0)
 
@@ -100,10 +99,6 @@ def draw_fireflies(draw):
         if f['blink']:
             draw.point((f['x'], f['y']), fill=1)
 
-# def draw_fire_glow(draw):
-#     for radius in range(25, 0, -5):
-#         draw.ellipse((75 - radius, 110 - radius, 75 + radius, 110 + radius), outline=1)
-
 def draw_shooting_star(draw):
     global shooting_star
     if shooting_star:
@@ -124,7 +119,7 @@ try:
     epd.init()
     epd.Clear(0xFF)
 
-    # Show loading screen animation
+    # Stylized loading screen
     load_img = Image.new('1', (epd.height, epd.width), 255)
     draw = ImageDraw.Draw(load_img)
 
@@ -133,13 +128,29 @@ try:
     except:
         font = ImageFont.load_default()
 
-    dots = ""
-    for i in range(8):
+    for _ in range(8):
         draw.rectangle((0, 0, epd.height, epd.width), fill=255)
-        draw.text((10, 50), f"Loading{dots}", font=font, fill=0)
+        draw.text((10, 40), "STOCHASTIC.HAUS", font=font, fill=0)
+
+        # Draw stochastic squiggle
+        x_start = 10
+        y_base = 70
+        steps = 60
+        walk = [y_base]
+        for _ in range(steps - 1):
+            delta = random.choice([-1, 0, 1])
+            walk.append(max(0, min(122, walk[-1] + delta)))
+
+        for i in range(steps - 1):
+            x1 = x_start + i
+            x2 = x_start + i + 1
+            y1 = walk[i]
+            y2 = walk[i + 1]
+            if x2 < epd.height:
+                draw.line((x1, y1, x2, y2), fill=0)
+
         epd.displayPartial(epd.getbuffer(load_img))
         time.sleep(0.25)
-        dots += "."
 
     base = Image.new('1', (epd.height, epd.width), 255)
     epd.displayPartBaseImage(epd.getbuffer(base))
@@ -170,7 +181,7 @@ try:
             draw_sun(draw)
 
         for cloud in clouds:
-            cloud_color = 1 if night else 0  # White at night, black in day
+            cloud_color = 1 if night else 0
             draw_cloud(draw, cloud['x'], cloud['y'], fill_color=cloud_color)
             cloud['x'] -= 1
             if cloud['x'] < -CLOUD_WIDTH:
@@ -193,7 +204,6 @@ try:
 
         if night:
             draw_fireflies(draw)
-            #draw_fire_glow(draw)
 
         epd.displayPartial(epd.getbuffer(image))
         time.sleep(0.1)
