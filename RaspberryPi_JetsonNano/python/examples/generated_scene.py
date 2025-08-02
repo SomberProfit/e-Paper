@@ -1,26 +1,18 @@
-Here's a simple example of how you might draw a scene with trees and a sun using the Python Imaging Library (PIL):
+Sure, here's a basic Python script to create the scene with the text "Hello!". Please replace 'your_font_path.ttf' with the path of your actual .ttf file. 
 
 ```python
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
-# Create a new 1-bit image
-image = Image.new('1', (200, 200), 1)
-
+# Create a blank image
+image = Image.new('1', (250, 122), 255)  # 255: clear the frame
 draw = ImageDraw.Draw(image)
 
-# Draw the sun
-draw.ellipse((160, 20, 190, 50), fill=0)
+# Add text
+font = ImageFont.truetype('your_font_path.ttf', 15)
+draw.text((10, 50), 'Hello!', font=font, fill=0)
 
-# Draw the trees
-for i in range(3):
-    # Tree trunk
-    draw.rectangle((50 + i*50, 110, 60 + i*50, 170), fill=0)
-    # Tree top
-    draw.polygon((40 + i*50, 110, 70 + i*50, 110, 55 + i*50, 70), fill=0)
-    
-image.show()
+# Save the image
+image.save('hello_scene.bmp')
 ```
 
-This code generates an image of 200x200 pixels, which has a sun appearing in the upper right corner. Below the sun, there are three trees. Each tree includes a tree trunk represented by a rectangle and a tree top represented by a polygon. 
-
-Notice that the `Image.new` function is called with the argument `'1'` to create a 1-bit image, and the fill color for the shapes is set to 0 to make them black (1 would make the shapes white on this kind of image).
+The script is creating a new image that is 250 pixels by 122 pixels. This is standard for Waveshare e-Paper displays, but you can adjust the size as needed for your specific display.
