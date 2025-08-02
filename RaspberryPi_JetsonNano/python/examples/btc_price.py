@@ -23,7 +23,12 @@ def get_btc_price():
             'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
             timeout=10
         )
-        return r.json()['bitcoin']['usd']
+        data = r.json()
+        if 'bitcoin' in data and 'usd' in data['bitcoin']:
+            return data['bitcoin']['usd']
+        else:
+            logging.warning(f"Unexpected API response: {data}")
+            return None
     except Exception as e:
         logging.warning(f"Error fetching BTC price: {e}")
         return None
@@ -37,7 +42,6 @@ try:
 
     font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
 
-    # Partial update base image
     base_image = Image.new('1', (epd.height, epd.width), 255)
     epd.displayPartBaseImage(epd.getbuffer(base_image))
 
@@ -50,6 +54,7 @@ try:
         sparkline = Image.open(sparkline_path).resize((epd.height, 30)).convert('1')
     else:
         sparkline = None
+        logging.warning("No sparkline image found.")
 
     while True:
         price = get_btc_price()
@@ -64,16 +69,18 @@ try:
             else:
                 text = "BTC: ERROR"
 
-            text_width, _ = draw.textsize(text, font=font24)
+            # Center text
+            bbox = draw.textbbox((0, 0), text, font=font24)
+            text_width = bbox[2] - bbox[0]
             x = (epd.height - text_width) // 2
             y = 0
             draw.text((x, y), text, font=font24, fill=0)
 
-            # Sparkline (below text)
+            # Sparkline image (optional)
             if sparkline:
                 image.paste(sparkline, (0, 30))
 
-            # Status bar
+            # Progress/status bar
             progress = (i + 1) / 10
             bar_fill_width = int(epd.height * progress)
             draw.rectangle((0, BAR_Y, bar_fill_width, BAR_Y + BAR_HEIGHT), fill=0)
