@@ -128,21 +128,24 @@ try:
         while True:
             key = get_keypress()
             if key == '\x1b':  # escape sequence
-                seq = sys.stdin.read(2)
-                if seq == '[A':  # up
-                    print("↑ Up pressed")
-                    if scroll_offset > 0:
-                        scroll_offset -= SCROLL_STEP
-                        display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
-                elif seq == '[B':  # down
-                    print("↓ Down pressed")
-                    if scroll_offset < max(0, len(screen_lines) - max_lines):
-                        scroll_offset += SCROLL_STEP
-                        display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
-                elif seq == '[C':  # right arrow resets view
-                    print("→ Right pressed (snap to latest)")
-                    scroll_offset = max(0, len(screen_lines) - max_lines)
-                    display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
+                if select.select([sys.stdin], [], [], 0)[0]:
+                    next1 = sys.stdin.read(1)
+                    if next1 == '[':
+                        next2 = sys.stdin.read(1)
+                        if next2 == 'A':  # up
+                            print("↑ Up pressed")
+                            if scroll_offset > 0:
+                                scroll_offset -= SCROLL_STEP
+                                display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
+                        elif next2 == 'B':  # down
+                            print("↓ Down pressed")
+                            if scroll_offset < max(0, len(screen_lines) - max_lines):
+                                scroll_offset += SCROLL_STEP
+                                display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
+                        elif next2 == 'C':  # right arrow resets view
+                            print("→ Right pressed (snap to latest)")
+                            scroll_offset = max(0, len(screen_lines) - max_lines)
+                            display_lines(epd, font, screen_lines, scroll_offset, max_lines, max_width)
             elif key == '\n':
                 print("↵ Enter pressed")
                 break
